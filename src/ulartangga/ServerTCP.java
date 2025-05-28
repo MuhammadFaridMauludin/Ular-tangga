@@ -9,12 +9,12 @@ public class ServerTCP {
     private static final int PORT = 12345;
     private static final int MAX_PLAYERS = 3;
     private static List<ClientHandler> players = new ArrayList<>();
-    private static int[] playerPositions = {0, 0, 0}; // Posisi 3 pemain
+    private static int[] playerPositions = {0, 0, 0};
     private static int currentPlayer = 0;
     private static boolean gameStarted = false;
     private static boolean gameEnded = false;
     
-    // Definisi ular dan tangga
+    //
     private static Map<Integer, Integer> snakes = new HashMap<>();
     private static Map<Integer, Integer> ladders = new HashMap<>();
     
@@ -92,18 +92,15 @@ public class ServerTCP {
                 newPosition = oldPosition + diceRoll;
             }
         } else {
-            // Aturan normal
             if (newPosition > 100) {
                 newPosition = oldPosition;
                 broadcastMessage("BOUNCE:" + playerId + ":" + oldPosition + ":" + diceRoll);
             } else {
-                // Cek ular
                 if (snakes.containsKey(newPosition)) {
                     int snakeEnd = snakes.get(newPosition);
                     broadcastMessage("SNAKE:" + playerId + ":" + newPosition + ":" + snakeEnd);
                     newPosition = snakeEnd;
                 }
-                // Cek tangga
                 else if (ladders.containsKey(newPosition)) {
                     int ladderEnd = ladders.get(newPosition);
                     broadcastMessage("LADDER:" + playerId + ":" + newPosition + ":" + ladderEnd);
@@ -140,15 +137,12 @@ public class ServerTCP {
             }
         }
         
-        // Cek dadu 6 untuk roll lagi
         if (diceRoll == 6 && !hasFinished[playerId]) {
             rollAgain = true;
             broadcastMessage("ROLL_AGAIN:" + playerId);
         }
         
         broadcastGameState();
-        
-        // Pindah ke pemain berikutnya jika tidak roll lagi
         if (!rollAgain) {
             do {
                 currentPlayer = (currentPlayer + 1) % MAX_PLAYERS;
