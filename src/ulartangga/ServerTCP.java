@@ -9,6 +9,7 @@ public class ServerTCP {
     private static final int PORT = 12345;
     private static final int MAX_PLAYERS = 3;
     private static List<ClientHandler> players = new ArrayList<>();
+    private static int[] playerPositions = {0, 0, 0};
     private static int currentPlayer = 0;
     private static boolean gameStarted = false;
     private static boolean gameEnded = false;
@@ -29,6 +30,8 @@ public class ServerTCP {
                 if (players.size() == MAX_PLAYERS) {
                     gameStarted = true;
                     broadcastMessage("GAME_START");
+                    broadcastGameState();
+                    broadcastMessage("TURN:0");
                 }
             }
         } catch (IOException e) {
@@ -40,6 +43,11 @@ public class ServerTCP {
         for (ClientHandler player : players) {
             player.sendMessage(message);
         }
+    }
+    
+    public static void broadcastGameState() {
+        String state = "STATE:" + playerPositions[0] + ":" + playerPositions[1] + ":" + playerPositions[2];
+        broadcastMessage(state);
     }
     
     static class ClientHandler implements Runnable {
@@ -66,17 +74,14 @@ public class ServerTCP {
             try {
                 String message;
                 while ((message = reader.readLine()) != null) {
-                    // Basic message handling - to be expanded
-                    System.out.println("Received: " + message);
+                    if (message.startsWith("ROLL:")) {
+                        int diceRoll = Integer.parseInt(message.substring(5));
+                        System.out.println("Pemain " + (playerId + 1) + " melempar dadu: " + diceRoll);
+                        processMove(playerId, diceRoll);
+                    }
                 }
             } catch (IOException e) {
                 System.err.println("Error pada ClientHandler: " + e.getMessage());
-            } finally {
-                try {
-                    socket.close();
-                } catch (IOException e) {
-                    System.err.println("Error menutup socket: " + e.getMessage());
-                }
             }
         }
         
@@ -84,6 +89,6 @@ public class ServerTCP {
             if (writer != null) {
                 writer.println(message);
             }
-        }
-    }
+ }
+}
 }
