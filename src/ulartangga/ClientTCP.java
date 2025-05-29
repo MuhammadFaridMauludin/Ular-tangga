@@ -144,3 +144,86 @@ public class ClientTCP extends JFrame {
         // Implementation for drawing ladder lines
     }
 }
+    // Client-side network handling
+    private void connectToServer() {
+        try {
+            socket = new Socket(SERVER_IP, SERVER_PORT);
+            reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            writer = new PrintWriter(socket.getOutputStream(), true);
+            
+            // Thread untuk menerima pesan dari server
+            new Thread(() -> {
+                try {
+                    String message;
+                    while ((message = reader.readLine()) != null) {
+                        handleServerMessage(message);
+                    }
+                } catch (IOException e) {
+                    statusLabel.setText("Koneksi terputus!");
+                }
+            }).start();
+            
+        } catch (IOException e) {
+            statusLabel.setText("Gagal terhubung ke server!");
+        }
+    }
+    
+    private void handleServerMessage(String message) {
+        SwingUtilities.invokeLater(() -> {
+            if (message.startsWith("PLAYER_ID:")) {
+                playerId = Integer.parseInt(message.substring(10));
+                setTitle("Ular Tangga - Pemain " + (playerId + 1));
+                statusLabel.setText("Terhubung sebagai Pemain " + (playerId + 1));
+                
+            } else if (message.equals("GAME_START")) {
+                gameStarted = true;
+                statusLabel.setText("Game dimulai!");
+                
+            } else if (message.startsWith("STATE:")) {
+                String[] parts = message.substring(6).split(":");
+                for (int i = 0; i < 3; i++) {
+                    playerPositions[i] = Integer.parseInt(parts[i]);
+                    playerLabels[i].setText("Pemain " + (i + 1) + ": " + playerPositions[i]);
+                }
+                boardPanel.repaint();
+                
+            } else if (message.startsWith("TURN:")) {
+                int currentPlayer = Integer.parseInt(message.substring(5));
+                isMyTurn = (currentPlayer == playerId);
+                rollButton.setEnabled(isMyTurn && gameStarted && !gameEnded);
+                
+                if (isMyTurn) {
+                    statusLabel.setText("Giliran Anda!");
+                } else {
+                    statusLabel.setText("Giliran Pemain " + (currentPlayer + 1));
+                }
+                
+            } else if (message.startsWith("ROLL_AGAIN:")) {
+                int playerIdRollAgain = Integer.parseInt(message.substring(12));
+                if (playerIdRollAgain == playerId) {
+                    rollAgain = true;
+                    statusLabel.setText("Dadu 6! Lempar lagi!");
+                    rollButton.setEnabled(true);
+                }
+                
+            } else if (message.startsWith("SNAKE:")) {
+                String[] parts = message.substring(6).split(":");
+                int playerIdSnake = Integer.parseInt(parts[0]);
+                int from = Integer.parseInt(parts[1]);
+                int to = Integer.parseInt(parts[2]);
+                statusLabel.setText("Pemain " + (playerIdSnake + 1) + " terkena ular! (" + from + "→" + to + ")");
+                
+            } else if (message.startsWith("LADDER:")) {
+                String[] parts = message.substring(7).split(":");
+                int playerIdLadder = Integer.parseInt(parts[0]);
+                int from = Integer.parseInt(parts[1]);
+                int to = Integer.parseInt(parts[2]);
+                statusLabel.setText("Pemain " + (playerIdLadder + 1) + " naik tangga! (" + from + "→" + to + ")");
+                
+            } else if (message.startsWith("LEADERBOARD:")) {
+                gameEnded = true;
+                rollButton.setEnabled(false);
+                showLeaderboard(message.substring(12));
+            }
+        });
+    }
